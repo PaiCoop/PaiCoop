@@ -2,7 +2,7 @@ const app = require('express')();
 const MongoClient = require("mongodb").MongoClient;
 const bodyParser = require('body-parser');
 
-const url = "mongodb://localhost/";
+const url = "mongodb://mongo/";
 
 
 app.use(bodyParser.json());

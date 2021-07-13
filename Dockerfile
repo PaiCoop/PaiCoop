@@ -1,4 +1,4 @@
-FROM keymetrics/pm2:latest-alpine
+FROM oscar86hsu/pm2
 
 # Bundle APP files
 COPY src src/

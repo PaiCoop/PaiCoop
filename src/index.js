@@ -6,12 +6,12 @@ const url = "mongodb://mongo/";
 
 
 app.use(bodyParser.json());
-
+app.use(bodyParser.urlencoded({extended: true}));
 
 
 const genStatusObj = (status, code, message, data) => ({
 	status: status || false,
-	statusCode: code || 500,
+	statusCode: code===0?0:(code||500),
 	message: message || 'Unknown Server Error!',
 	data: data || null
 })
@@ -20,10 +20,12 @@ const genStatusObj = (status, code, message, data) => ({
 
 let getData = (db, filter) => new Promise(async resolve => resolve(await db.find(filter).toArray()));
 let setData = (db, data) => new Promise(async resolve => resolve(await db.updateOne(
-	{userProfile: {netid: data.userProfile.netid}}, 
-	data,
-	{upsert: true}
-	)));
+			{"userProfile.netid": data.userProfile.netid}, 
+			{$set: data},
+			{upsert: true}
+		))
+
+);
 
 let delAllData = db => new Promise(async resolve => resolve(await db.drop()));
 
@@ -32,7 +34,6 @@ let DB = (method, params) => new Promise(async (resolve, reject) => {
     let conn = null;
     try {
         conn = await MongoClient.connect(url);
-        console.log("数据库已连接");
         const db = conn.db("paicoop").collection("data");
 
         resolve(await method(db, params));
@@ -58,7 +59,7 @@ let _generateList = FormArr => {
 
 
 
-const port = 3000;
+const port = 80;
 
 
 app.listen(port, () => {
@@ -69,7 +70,7 @@ app.listen(port, () => {
 
 
 app.get('/', (req, res) => {
-  res.send({a: 33})
+  res.send('Hello PaiCoop!')
 })
 
 
@@ -95,7 +96,7 @@ app.get('/api/getForm', async (req, res) => {
 	}
 
 	try{
-		let arr = await DB(getData, {userProfile: {netid: req.query.netid}});
+		let arr = await DB(getData, {"userProfile.netid": req.query.netid});
 		res.send(genStatusObj(true, 0, 'Successful!', ...arr));
 	}catch(e){
 		res.send(genStatusObj(false, 501, e));
@@ -108,7 +109,11 @@ app.post('/api/setForm', async (req, res) => {
 	if(!req.body.hasOwnProperty('form')){
 		return res.send(genStatusObj(false, 503, 'Illegal form!!'));
 	}
-
+	try{
+	    req.body.form = JSON.parse(req.body.form);
+	}catch(e){
+       	    return res.send(genStatusObj(false, 504, 'JSON parse error!'));
+	}
 	try{
 		res.send(genStatusObj(true, 0, 'Successful!', await DB(setData, req.body.form)));
 	}catch(e){
